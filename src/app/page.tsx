@@ -1,65 +1,129 @@
-import Image from "next/image";
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
+import { Music, Video, FileText, Sparkles } from 'lucide-react'
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div className="flex min-h-screen flex-col">
+      {/* Hero Section */}
+      <section className="container mx-auto px-4 py-20 text-center">
+        <div className="mx-auto max-w-3xl space-y-6">
+          <h1 className="text-5xl font-bold tracking-tight sm:text-6xl">
+            Sell Your Digital Content,
+            <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+              {' '}Your Way
+            </span>
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="text-xl text-muted-foreground">
+            The complete platform for creators to monetize music, videos, courses, and more.
+            No limits, no barriers.
           </p>
+          <div className="flex justify-center gap-4">
+            <Link href="/sign-up">
+              <Button size="lg" className="gap-2">
+                <Sparkles className="h-5 w-5" />
+                Start Creating
+              </Button>
+            </Link>
+            <Link href="/explore">
+              <Button size="lg" variant="outline">
+                Explore Content
+              </Button>
+            </Link>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </section>
+
+      {/* Features Section */}
+      <section className="bg-muted/30 py-20">
+        <div className="container mx-auto px-4">
+          <h2 className="mb-12 text-center text-3xl font-bold">
+            All Your Content, One Platform
+          </h2>
+          <div className="grid gap-8 md:grid-cols-3">
+            <div className="space-y-3 rounded-lg border bg-card p-6">
+              <Music className="h-10 w-10 text-purple-600" />
+              <h3 className="text-xl font-semibold">Music & Audio</h3>
+              <p className="text-muted-foreground">
+                Sell tracks, albums, or stream with subscriptions. Built-in player with playlists.
+              </p>
+            </div>
+            <div className="space-y-3 rounded-lg border bg-card p-6">
+              <Video className="h-10 w-10 text-blue-600" />
+              <h3 className="text-xl font-semibold">Videos & Courses</h3>
+              <p className="text-muted-foreground">
+                Secure streaming with HLS. Perfect for tutorials, films, and educational content.
+              </p>
+            </div>
+            <div className="space-y-3 rounded-lg border bg-card p-6">
+              <FileText className="h-10 w-10 text-green-600" />
+              <h3 className="text-xl font-semibold">Documents & More</h3>
+              <p className="text-muted-foreground">
+                PDFs, ebooks, templates, photos. Any digital product you create.
+              </p>
+            </div>
+          </div>
         </div>
-      </main>
+      </section>
+
+      {/* Pricing Models */}
+      <section className="py-20">
+        <div className="container mx-auto px-4">
+          <h2 className="mb-12 text-center text-3xl font-bold">
+            Flexible Monetization
+          </h2>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-lg border p-6">
+              <h3 className="mb-2 font-semibold">Single Purchase</h3>
+              <p className="text-sm text-muted-foreground">
+                One-time payment, lifetime access
+              </p>
+            </div>
+            <div className="rounded-lg border p-6">
+              <h3 className="mb-2 font-semibold">Subscriptions</h3>
+              <p className="text-sm text-muted-foreground">
+                Monthly recurring revenue from fans
+              </p>
+            </div>
+            <div className="rounded-lg border p-6">
+              <h3 className="mb-2 font-semibold">Free + Premium</h3>
+              <p className="text-sm text-muted-foreground">
+                Hybrid model for maximum reach
+              </p>
+            </div>
+            <div className="rounded-lg border p-6">
+              <h3 className="mb-2 font-semibold">Custom Requests</h3>
+              <p className="text-sm text-muted-foreground">
+                Get paid for commissioned work
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="bg-gradient-to-r from-purple-600 to-blue-600 py-20 text-white">
+        <div className="container mx-auto px-4 text-center">
+          <h2 className="mb-4 text-3xl font-bold">
+            Ready to Monetize Your Creativity?
+          </h2>
+          <p className="mb-8 text-lg opacity-90">
+            Join thousands of creators earning from their digital content
+          </p>
+          <Link href="/sign-up">
+            <Button size="lg" variant="secondary">
+              Get Started Free
+            </Button>
+          </Link>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t py-8">
+        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
+          <p>© 2025 CR8. Built for creators, by creators.</p>
+        </div>
+      </footer>
     </div>
-  );
+  )
 }

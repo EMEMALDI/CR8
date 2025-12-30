@@ -1,0 +1,672 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================
+// Core Models
+// ============================================
+
+model User {
+  id            String    @id @default(uuid())
+  clerkId       String    @unique
+  email         String    @unique
+  username      String    @unique
+  displayName   String?
+  avatar        String?
+  bio           String?
+  role          UserRole  @default(USER)
+  suspended     Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  lastActiveAt  DateTime  @default(now())
+
+  // Relations
+  creatorProfile        CreatorProfile?
+  purchases             Purchase[]
+  subscriptions         Subscription[]
+  playlists             Playlist[]
+  playlistCollaborations PlaylistCollaborator[]
+  playbackHistory       PlaybackHistory[]
+  favorites             Favorite[]
+  comments              Comment[]
+  reviews               Review[]
+  notifications         Notification[]
+  sentMessages          Message[]         @relation("SentMessages")
+  receivedMessages      Message[]         @relation("ReceivedMessages")
+  customRequests        CustomRequest[]
+  affiliateLinks        AffiliateLink[]
+  reports               Report[]          @relation("ReporterReports")
+  reportedReports       Report[]          @relation("ReportedUserReports")
+
+  @@index([clerkId])
+  @@index([email])
+  @@index([username])
+}
+
+model CreatorProfile {
+  id                      String    @id @default(uuid())
+  userId                  String    @unique
+  displayName             String
+  bio                     String?
+  avatar                  String?
+  coverImage              String?
+  socialLinks             Json?
+  verified                Boolean   @default(false)
+  commissionRate          Decimal   @default(0.10) @db.Decimal(3, 2)
+  stripeAccountId         String?
+  allowMessages           Boolean   @default(false)
+  messagePricePerMessage  Decimal?  @db.Decimal(10, 2)
+  allowCustomRequests     Boolean   @default(false)
+  verifiedAt              DateTime?
+  createdAt               DateTime  @default(now())
+
+  // Relations
+  user                  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content               Content[]
+  subscriptionTiers     SubscriptionTier[]
+  customRequests        CustomRequest[]
+  payouts               Payout[]
+  affiliateLinks        AffiliateLink[]
+  contentBundles        ContentBundle[]
+  discountCodes         DiscountCode[]
+
+  @@index([userId])
+}
+
+model Content {
+  id                String        @id @default(uuid())
+  creatorId         String
+  contentType       ContentType
+  title             String
+  description       String?
+  accessModel       AccessModel
+  price             Decimal?      @db.Decimal(10, 2)
+  thumbnailUrl      String?
+  coverImageUrl     String?
+  duration          Int?
+  status            ContentStatus @default(DRAFT)
+  metadata          Json?
+  commentsEnabled   Boolean       @default(true)
+  allowDownload     Boolean       @default(false)
+  watermarkEnabled  Boolean       @default(false)
+  viewCount         Int           @default(0)
+  purchaseCount     Int           @default(0)
+  publishedAt       DateTime?
+  scheduledFor      DateTime?
+  createdAt         DateTime      @default(now())
+
+  // Relations
+  creator             CreatorProfile  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  files               ContentFile[]
+  purchases           Purchase[]
+  playlistItems       PlaylistItem[]
+  playbackHistory     PlaybackHistory[]
+  favorites           Favorite[]
+  comments            Comment[]
+  reviews             Review[]
+  tags                ContentTag[]
+  customRequests      CustomRequest[]
+  bundleContents      BundleContent[]
+
+  @@index([creatorId])
+  @@index([status])
+  @@index([publishedAt])
+  @@index([contentType])
+}
+
+model ContentFile {
+  id            String      @id @default(uuid())
+  contentId     String
+  fileType      FileType
+  storageKey    String
+  filename      String
+  fileSize      BigInt
+  mimeType      String
+  streamingUrls Json?
+  downloadable  Boolean     @default(false)
+  version       String?
+  uploadedAt    DateTime    @default(now())
+
+  // Relations
+  content       Content     @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@index([contentId])
+}
+
+// ============================================
+// Payment & Subscription Models
+// ============================================
+
+model Purchase {
+  id                  String    @id @default(uuid())
+  userId              String
+  contentId           String
+  affiliateLinkId     String?
+  amount              Decimal   @db.Decimal(10, 2)
+  platformFee         Decimal   @db.Decimal(10, 2)
+  creatorEarning      Decimal   @db.Decimal(10, 2)
+  affiliateCommission Decimal?  @db.Decimal(10, 2)
+  stripePaymentId     String
+  purchasedAt         DateTime  @default(now())
+
+  // Relations
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content       Content       @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  affiliateLink AffiliateLink? @relation(fields: [affiliateLinkId], references: [id])
+
+  @@index([userId])
+  @@index([contentId])
+  @@index([purchasedAt])
+}
+
+model SubscriptionTier {
+  id              String    @id @default(uuid())
+  creatorId       String
+  name            String
+  description     String?
+  monthlyPrice    Decimal   @db.Decimal(10, 2)
+  benefits        Json?
+  active          Boolean   @default(true)
+  subscriberCount Int       @default(0)
+  createdAt       DateTime  @default(now())
+
+  // Relations
+  creator       CreatorProfile  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  subscriptions Subscription[]
+
+  @@index([creatorId])
+}
+
+model Subscription {
+  id                    String             @id @default(uuid())
+  userId                String
+  tierId                String
+  status                SubscriptionStatus
+  startDate             DateTime
+  endDate               DateTime
+  canceledAt            DateTime?
+  stripeSubscriptionId  String?
+  autoRenew             Boolean            @default(true)
+  createdAt             DateTime           @default(now())
+
+  // Relations
+  user  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tier  SubscriptionTier @relation(fields: [tierId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tierId])
+  @@index([status])
+}
+
+// ============================================
+// Music & Playlist Models
+// ============================================
+
+model Playlist {
+  id            String        @id @default(uuid())
+  userId        String
+  name          String
+  description   String?
+  coverImage    String?
+  visibility    Visibility
+  playlistType  PlaylistType
+  smartCriteria Json?
+  itemCount     Int           @default(0)
+  totalDuration Int           @default(0)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relations
+  user          User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items         PlaylistItem[]
+  collaborators PlaylistCollaborator[]
+
+  @@index([userId])
+  @@index([visibility])
+}
+
+model PlaylistItem {
+  id            String    @id @default(uuid())
+  playlistId    String
+  contentId     String
+  position      Int
+  addedByUserId String?
+  addedAt       DateTime  @default(now())
+
+  // Relations
+  playlist  Playlist  @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  content   Content   @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@index([playlistId])
+  @@index([contentId])
+  @@index([position])
+}
+
+model PlaylistCollaborator {
+  id          String            @id @default(uuid())
+  playlistId  String
+  userId      String
+  permission  CollabPermission
+  addedAt     DateTime          @default(now())
+
+  // Relations
+  playlist  Playlist  @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([playlistId])
+  @@index([userId])
+}
+
+model PlaybackHistory {
+  id            String    @id @default(uuid())
+  userId        String
+  contentId     String
+  position      Int
+  playCount     Int       @default(1)
+  lastPlayedAt  DateTime  @default(now())
+  firstPlayedAt DateTime  @default(now())
+
+  // Relations
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, contentId])
+  @@index([userId])
+  @@index([contentId])
+  @@index([lastPlayedAt])
+}
+
+// ============================================
+// Engagement Models
+// ============================================
+
+model Favorite {
+  id        String   @id @default(uuid())
+  userId    String
+  contentId String
+  createdAt DateTime @default(now())
+
+  // Relations
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, contentId])
+  @@index([userId])
+  @@index([contentId])
+}
+
+model Comment {
+  id              String    @id @default(uuid())
+  userId          String
+  contentId       String
+  parentCommentId String?
+  content         String
+  approved        Boolean   @default(true)
+  edited          Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contentItem   Content   @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  parentComment Comment?  @relation("CommentReplies", fields: [parentCommentId], references: [id], onDelete: Cascade)
+  replies       Comment[] @relation("CommentReplies")
+
+  @@index([contentId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  userId    String
+  contentId String
+  rating    Int
+  comment   String?
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  // Relations
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, contentId])
+  @@index([contentId])
+}
+
+model Tag {
+  id         String      @id @default(uuid())
+  name       String      @unique
+  category   TagCategory
+  slug       String      @unique
+  usageCount Int         @default(0)
+
+  // Relations
+  contents ContentTag[]
+
+  @@index([slug])
+  @@index([category])
+}
+
+model ContentTag {
+  contentId String
+  tagId     String
+
+  // Relations
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  tag     Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([contentId, tagId])
+  @@index([contentId])
+  @@index([tagId])
+}
+
+// ============================================
+// Advanced Features Models
+// ============================================
+
+model Notification {
+  id       String           @id @default(uuid())
+  userId   String
+  type     NotificationType
+  title    String
+  message  String
+  data     Json?
+  read     Boolean          @default(false)
+  linkUrl  String?
+  createdAt DateTime        @default(now())
+  readAt   DateTime?
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
+}
+
+model Message {
+  id                  String    @id @default(uuid())
+  senderId            String
+  recipientId         String
+  content             String
+  read                Boolean   @default(false)
+  attachmentContentId String?
+  createdAt           DateTime  @default(now())
+  readAt              DateTime?
+
+  // Relations
+  sender    User            @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient User            @relation("ReceivedMessages", fields: [recipientId], references: [id], onDelete: Cascade)
+  payment   MessagePayment?
+
+  @@index([senderId])
+  @@index([recipientId])
+  @@index([createdAt])
+}
+
+model MessagePayment {
+  id              String   @id @default(uuid())
+  messageId       String   @unique
+  payerId         String
+  amount          Decimal  @db.Decimal(10, 2)
+  stripePaymentId String
+  paidAt          DateTime @default(now())
+
+  // Relations
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+}
+
+model CustomRequest {
+  id                  String              @id @default(uuid())
+  requesterId         String
+  creatorId           String
+  title               String
+  description         String
+  offeredAmount       Decimal             @db.Decimal(10, 2)
+  status              CustomRequestStatus
+  creatorResponse     String?
+  deliveredContentId  String?
+  requestedAt         DateTime            @default(now())
+  respondedAt         DateTime?
+  completedAt         DateTime?
+
+  // Relations
+  requester        User            @relation(fields: [requesterId], references: [id], onDelete: Cascade)
+  creator          CreatorProfile  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  deliveredContent Content?        @relation(fields: [deliveredContentId], references: [id])
+
+  @@index([requesterId])
+  @@index([creatorId])
+  @@index([status])
+}
+
+model Report {
+  id                String       @id @default(uuid())
+  reporterId        String
+  contentId         String?
+  reportedUserId    String?
+  reason            ReportReason
+  description       String
+  status            ReportStatus
+  reviewedByAdminId String?
+  adminNotes        String?
+  createdAt         DateTime     @default(now())
+  reviewedAt        DateTime?
+
+  // Relations
+  reporter     User  @relation("ReporterReports", fields: [reporterId], references: [id], onDelete: Cascade)
+  reportedUser User? @relation("ReportedUserReports", fields: [reportedUserId], references: [id])
+
+  @@index([reporterId])
+  @@index([status])
+}
+
+model AffiliateLink {
+  id              String    @id @default(uuid())
+  userId          String
+  creatorId       String?
+  code            String    @unique
+  commissionRate  Decimal   @db.Decimal(3, 2)
+  clickCount      Int       @default(0)
+  conversionCount Int       @default(0)
+  totalEarned     Decimal   @default(0) @db.Decimal(10, 2)
+  active          Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+
+  // Relations
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  creator   CreatorProfile?  @relation(fields: [creatorId], references: [id])
+  purchases Purchase[]
+
+  @@index([code])
+}
+
+model ContentBundle {
+  id              String   @id @default(uuid())
+  creatorId       String
+  name            String
+  description     String?
+  price           Decimal  @db.Decimal(10, 2)
+  discountPercent Decimal  @db.Decimal(5, 2)
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  // Relations
+  creator  CreatorProfile  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  contents BundleContent[]
+
+  @@index([creatorId])
+}
+
+model BundleContent {
+  bundleId  String
+  contentId String
+
+  // Relations
+  bundle  ContentBundle @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+  content Content       @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@id([bundleId, contentId])
+  @@index([bundleId])
+  @@index([contentId])
+}
+
+model DiscountCode {
+  id            String       @id @default(uuid())
+  creatorId     String?
+  code          String       @unique
+  discountType  DiscountType
+  discountValue Decimal      @db.Decimal(10, 2)
+  maxUses       Int?
+  currentUses   Int          @default(0)
+  validFrom     DateTime
+  validUntil    DateTime
+  active        Boolean      @default(true)
+
+  // Relations
+  creator CreatorProfile? @relation(fields: [creatorId], references: [id])
+
+  @@index([code])
+}
+
+model Payout {
+  id               String       @id @default(uuid())
+  creatorId        String
+  amount           Decimal      @db.Decimal(10, 2)
+  status           PayoutStatus
+  stripeTransferId String?
+  notes            String?
+  requestedAt      DateTime     @default(now())
+  completedAt      DateTime?
+
+  // Relations
+  creator CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@index([creatorId])
+  @@index([status])
+}
+
+// ============================================
+// Enums
+// ============================================
+
+enum UserRole {
+  USER
+  CREATOR
+  ADMIN
+}
+
+enum ContentType {
+  MUSIC
+  VIDEO
+  IMAGE
+  PDF
+  DOCUMENT
+  COURSE
+  OTHER
+}
+
+enum AccessModel {
+  FREE
+  PURCHASE
+  SUBSCRIPTION
+  HYBRID
+}
+
+enum ContentStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
+enum FileType {
+  ORIGINAL
+  COMPRESSED
+  PREVIEW
+  THUMBNAIL
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  EXPIRED
+  PAUSED
+}
+
+enum Visibility {
+  PUBLIC
+  PRIVATE
+  UNLISTED
+}
+
+enum PlaylistType {
+  MANUAL
+  SMART
+}
+
+enum CollabPermission {
+  VIEW
+  ADD
+  EDIT
+  MANAGE
+}
+
+enum TagCategory {
+  GENRE
+  MOOD
+  TOPIC
+  SKILL_LEVEL
+}
+
+enum NotificationType {
+  NEW_CONTENT
+  NEW_SUBSCRIBER
+  PURCHASE
+  COMMENT
+  PAYMENT
+  SYSTEM
+}
+
+enum CustomRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELED
+}
+
+enum ReportReason {
+  SPAM
+  COPYRIGHT
+  INAPPROPRIATE
+  HARASSMENT
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  UNDER_REVIEW
+  RESOLVED
+  DISMISSED
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
